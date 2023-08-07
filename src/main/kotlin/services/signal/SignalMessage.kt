@@ -1,9 +1,6 @@
 package services.signal
 
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
+import kotlinx.serialization.json.*
 import services.ChatMessage
 
 data class SignalMessage (
@@ -11,11 +8,14 @@ data class SignalMessage (
     val sourceNumber: String,
     val sourceName: String,
     val conversationNumber: String,
-    val message: String,
+    val message: String?,
     val fromSelf: Boolean,
     val fromBot: Boolean,
     val quoteId: Long?,
-    val quoteText: String?
+    val quoteText: String?,
+    val reactionEmoji: String?,
+    val reactionTarget: Long?,
+    val isReactionRemove: Boolean?
 ) {
     companion object {
         fun fromEnvelope(envelope: JsonObject): SignalMessage {
@@ -58,8 +58,9 @@ data class SignalMessage (
                 timestamp = dataMessage["targetSentTimestamp"]!!.jsonPrimitive.long
             }
 
-            val message = dataMessage["message"]!!.jsonPrimitive.content
+            val message = dataMessage["message"]!!.jsonPrimitive.contentOrNull
 
+            // Get quote information
             var quoteId: Long? = null
             var quoteText: String? = null
 
@@ -67,6 +68,18 @@ data class SignalMessage (
                 val quote = dataMessage["quote"]!!.jsonObject
                 quoteId = quote["id"]!!.jsonPrimitive.long
                 quoteText = quote["text"]!!.jsonPrimitive.content
+            }
+
+            // Get reaction information
+            var reactionEmoji: String? = null
+            var reactionTarget: Long? = null
+            var isReactionRemove: Boolean? = null
+
+            if (dataMessage.containsKey("reaction")) {
+                val reaction = dataMessage["reaction"]!!.jsonObject
+                reactionEmoji = reaction["emoji"]?.jsonPrimitive?.contentOrNull
+                reactionTarget = reaction["targetSentTimestamp"]?.jsonPrimitive?.longOrNull
+                isReactionRemove = reaction["isRemove"]?.jsonPrimitive?.booleanOrNull
             }
 
             return SignalMessage(
@@ -78,7 +91,10 @@ data class SignalMessage (
                 fromSelf,
                 fromBot = false,
                 quoteId,
-                quoteText
+                quoteText,
+                reactionEmoji,
+                reactionTarget,
+                isReactionRemove
             )
         }
     }
@@ -94,7 +110,9 @@ data class SignalMessage (
             message,
             fromSelf,
             fromBot,
-            quoteText
+            quoteText,
+            reactionEmoji,
+            "MESSAGE NOT LOOKED UP"
         )
     }
 }

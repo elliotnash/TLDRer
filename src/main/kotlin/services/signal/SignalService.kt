@@ -1,5 +1,6 @@
 package services.signal
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
@@ -12,6 +13,8 @@ import java.util.UUID
 class SignalService(
     val accountNumber: String
 ) : ChatService {
+    private val logger = KotlinLogging.logger {}
+
     private val json = Json {
         serializersModule = SerializersModule {
             polymorphicDefaultSerializer(RpcMessage::class) { RpcMessageSerializer }
@@ -55,7 +58,6 @@ class SignalService(
         }
         scope.launch {
             fetchContactList()
-            sendMessage("+12508807560", "Testing to self")
         }
     }
 
@@ -70,17 +72,18 @@ class SignalService(
                 // We don't care about read/delivered receipts
                 if (envelope.containsKey("dataMessage") || (envelope.containsKey("syncMessage") && envelope["syncMessage"]!!.jsonObject.containsKey("sentMessage"))) {
                     val signalMessage = SignalMessage.fromEnvelope(envelope)
+                    logger.trace { "Decoded update: $signalMessage from ${json.encodeToString(message)}" }
                     // Add decoded message to database
                     SignalDatabase.addMessage(signalMessage)
                     // Notifier listeners
                     notifyMessageListeners(signalMessage.toChatMessage(contacts))
                 } else {
-                    println("Received non-decodable update: $message")
+                    logger.debug { "Received non-decodable update: $message" }
                 }
             } catch (e: Exception) {
-                println("Failed to decode decodable message:")
-                println(message)
-                println(json.encodeToString(message))
+                logger.warn { "Failed to decode decodable message:" }
+                logger.warn { message }
+                logger.warn { json.encodeToString(message) }
             }
         }
     }
@@ -104,7 +107,7 @@ class SignalService(
         val call = RpcCall("sendSyncRequest")
         val response = sendRpcMessage(call)
         if (response !is RpcResult) {
-            println("Error in sendSyncRequest: $response")
+            logger.warn { "Error in sendSyncRequest: $response" }
         }
     }
 
@@ -112,7 +115,7 @@ class SignalService(
         val call = RpcCall("listContacts")
         val response = sendRpcMessage(call)
         if (response !is RpcResult) {
-            println("Error fetching contacts: $response")
+            logger.warn { "Error fetching contacts: $response" }
             return
         }
 
@@ -144,7 +147,7 @@ class SignalService(
 
         val response = sendRpcMessage(call)
         if (response !is RpcResult) {
-            println("Error sending message: $response")
+            logger.warn{ "Error sending message: $response" }
             return
         }
 
@@ -161,7 +164,10 @@ class SignalService(
             fromSelf = true,
             fromBot = true,
             quoteId = null,
-            quoteText = null
+            quoteText = null,
+            reactionEmoji = null,
+            reactionTarget = null,
+            isReactionRemove = null,
         )
         SignalDatabase.addMessage(signalMessage)
         notifyMessageListeners(signalMessage.toChatMessage(contacts))

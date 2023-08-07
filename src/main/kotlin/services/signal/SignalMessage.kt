@@ -13,6 +13,7 @@ data class SignalMessage (
     val conversationNumber: String,
     val message: String,
     val fromSelf: Boolean,
+    val fromBot: Boolean,
     val quoteId: Long?,
     val quoteText: String?
 ) {
@@ -75,6 +76,7 @@ data class SignalMessage (
                 conversationNumber,
                 message,
                 fromSelf,
+                fromBot = false,
                 quoteId,
                 quoteText
             )
@@ -91,6 +93,7 @@ data class SignalMessage (
             conversationNumber,
             message,
             fromSelf,
+            fromBot,
             quoteText
         )
     }

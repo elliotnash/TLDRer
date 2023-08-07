@@ -23,7 +23,7 @@ class SignalService(
     private val reader = process.inputStream.reader()
     private val writer = process.outputStream.writer()
 
-    private val messageListeners = mutableSetOf<(ChatMessage) -> Unit>()
+    private val messageListeners = mutableSetOf<suspend (ChatMessage) -> Unit>()
 
     private val rpcQueue = mutableMapOf<String, CompletableDeferred<RpcResponse>>()
 
@@ -47,7 +47,9 @@ class SignalService(
         scope.launch {
             withContext(Dispatchers.IO) {
                 reader.forEachLine {
-                    handleMessage(json.decodeFromString<RpcMessage>(it))
+                    scope.launch {
+                        handleMessage(json.decodeFromString<RpcMessage>(it))
+                    }
                 }
             }
         }
@@ -57,7 +59,7 @@ class SignalService(
         }
     }
 
-    private fun handleMessage(message: RpcMessage) {
+    private suspend fun handleMessage(message: RpcMessage) {
         if (message is RpcResponse) {
             // If it's a result, we need to complete the rpcQueue
             rpcQueue.remove(message.id)?.complete(message)
@@ -71,10 +73,7 @@ class SignalService(
                     // Add decoded message to database
                     SignalDatabase.addMessage(signalMessage)
                     // Notifier listeners
-                    val chatMessage = signalMessage.toChatMessage(contacts)
-                    for (listener in messageListeners) {
-                        listener(chatMessage)
-                    }
+                    notifyMessageListeners(signalMessage.toChatMessage(contacts))
                 } else {
                     println("Received non-decodable update: $message")
                 }
@@ -86,11 +85,18 @@ class SignalService(
         }
     }
 
-    override fun addMessageListener(listener: (ChatMessage) -> Unit) {
+    private suspend fun notifyMessageListeners(message: ChatMessage) = coroutineScope {
+        for (listener in messageListeners) {
+            launch {
+                listener(message)
+            }
+        }
+    }
+    override fun addMessageListener(listener: suspend (ChatMessage) -> Unit) {
         messageListeners.add(listener)
     }
 
-    override fun removeMessageListener(listener: (ChatMessage) -> Unit) {
+    override fun removeMessageListener(listener: suspend (ChatMessage) -> Unit) {
         messageListeners.remove(listener)
     }
 
@@ -115,20 +121,20 @@ class SignalService(
         }.filterNotNull()
     }
 
-    suspend fun sendMessage(conversationNumber: String, message: String) {
+    override suspend fun sendMessage(conversationId: String, message: String) {
         val messageMap = mutableMapOf<String, JsonElement>(
             "message" to JsonPrimitive(message)
         )
 
         // Phone numbers start with +1
-        val group = !conversationNumber.startsWith("+")
+        val group = !conversationId.startsWith("+")
 
         if (group) {
             // It's a group chat
-            messageMap["groupId"] = JsonPrimitive(conversationNumber)
+            messageMap["groupId"] = JsonPrimitive(conversationId)
         } else {
             // Then it's a number, we should send it as a regular chat
-            messageMap["recipient"] = JsonArray(listOf(JsonPrimitive(conversationNumber)))
+            messageMap["recipient"] = JsonArray(listOf(JsonPrimitive(conversationId)))
         }
 
         val call = RpcCall(
@@ -150,12 +156,14 @@ class SignalService(
             timestamp,
             accountNumber,
             accountName,
-            conversationNumber,
+            conversationId,
             message,
-            true,
-            null,
-            null
+            fromSelf = true,
+            fromBot = true,
+            quoteId = null,
+            quoteText = null
         )
         SignalDatabase.addMessage(signalMessage)
+        notifyMessageListeners(signalMessage.toChatMessage(contacts))
     }
 }

@@ -6,5 +6,6 @@ data class ChatMessage (
     val conversationId: String,
     val message: String,
     val fromSelf: Boolean,
+    val fromBot: Boolean,
     val reply: String?
 )

@@ -23,6 +23,7 @@ object SignalDatabase {
                     it[conversationNumber] = message.conversationNumber
                     it[SignalMessages.message] = message.message
                     it[fromSelf] = message.fromSelf
+                    it[fromBot] = message.fromBot
                     it[quoteId] = message.quoteId
                     it[quoteText] = message.quoteText
                 }
@@ -40,6 +41,7 @@ object SignalMessages : Table("messages") {
     val conversationNumber: Column<String> = text("conversation_number")
     val message: Column<String> = text("message")
     val fromSelf: Column<Boolean> = bool("from_self")
+    val fromBot: Column<Boolean> = bool("from_bot")
     val quoteId: Column<Long?> = long("quote_id").nullable()
     val quoteText: Column<String?> = text("quote_text").nullable()
 }

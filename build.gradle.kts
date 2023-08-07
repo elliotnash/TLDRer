@@ -14,6 +14,9 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0-RC")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.exposed:exposed-core:0.42.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.42.0")
+    implementation("org.xerial:sqlite-jdbc:3.42.0.0")
 
     testImplementation(kotlin("test"))
 }
@@ -23,7 +26,7 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(17)
 }
 
 application {

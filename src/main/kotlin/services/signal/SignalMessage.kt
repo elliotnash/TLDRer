@@ -1,6 +1,7 @@
 package services.signal
 
 import kotlinx.serialization.json.*
+import org.jetbrains.exposed.sql.ResultRow
 import services.ChatMessage
 
 data class SignalMessage (
@@ -15,10 +16,30 @@ data class SignalMessage (
     val quoteText: String?,
     val reactionEmoji: String?,
     val reactionTarget: Long?,
-    val isReactionRemove: Boolean?
+    val attachmentsInfo: String?,
+    val isReactionRemove: Boolean,
+    val remoteDelete: Long?,
 ) {
     companion object {
-        fun fromEnvelope(envelope: JsonObject): SignalMessage {
+        fun fromResultRow(r: ResultRow): SignalMessage {
+            return SignalMessage(
+                r[SignalMessages.timestamp],
+                r[SignalMessages.sourceNumber],
+                r[SignalMessages.sourceName],
+                r[SignalMessages.conversationNumber],
+                r[SignalMessages.message],
+                r[SignalMessages.fromSelf],
+                r[SignalMessages.fromBot],
+                r[SignalMessages.quoteId],
+                r[SignalMessages.quoteText],
+                r[SignalMessages.reactionEmoji],
+                r[SignalMessages.reactionTarget],
+                r[SignalMessages.attachmentsInfo],
+                isReactionRemove = false,
+                remoteDelete = null,
+            )
+        }
+        fun fromJsonObject(envelope: JsonObject): SignalMessage {
             val fromSelf = envelope.containsKey("syncMessage")
 
             var timestamp = envelope["timestamp"]!!.jsonPrimitive.long
@@ -56,6 +77,7 @@ data class SignalMessage (
             if (dataMessage.containsKey("editMessage")) {
                 dataMessage = dataMessage["editMessage"]!!.jsonObject
                 timestamp = dataMessage["targetSentTimestamp"]!!.jsonPrimitive.long
+                dataMessage = dataMessage["dataMessage"]!!.jsonObject
             }
 
             val message = dataMessage["message"]!!.jsonPrimitive.contentOrNull
@@ -73,13 +95,30 @@ data class SignalMessage (
             // Get reaction information
             var reactionEmoji: String? = null
             var reactionTarget: Long? = null
-            var isReactionRemove: Boolean? = null
+            var isReactionRemove = false
 
             if (dataMessage.containsKey("reaction")) {
                 val reaction = dataMessage["reaction"]!!.jsonObject
                 reactionEmoji = reaction["emoji"]?.jsonPrimitive?.contentOrNull
                 reactionTarget = reaction["targetSentTimestamp"]?.jsonPrimitive?.longOrNull
-                isReactionRemove = reaction["isRemove"]?.jsonPrimitive?.booleanOrNull
+                isReactionRemove = reaction["isRemove"]?.jsonPrimitive?.booleanOrNull ?: false
+            }
+
+            val remoteDelete = dataMessage["remoteDelete"]?.jsonObject
+                ?.get("timestamp")?.jsonPrimitive?.longOrNull
+
+            var attachmentName: String? = null
+            if (dataMessage.containsKey("attachments")) {
+                val attachmentArray = dataMessage["attachments"]!!.jsonArray
+                attachmentName = "${attachmentArray.size} attachment"
+                if (attachmentArray.size > 1) {
+                    attachmentName += "s"
+                }
+                attachmentName += ": "
+                for (attachment in attachmentArray) {
+                    attachmentName += "'${attachment.jsonObject["filename"]?.jsonPrimitive?.contentOrNull}', "
+                }
+                attachmentName = attachmentName.dropLast(2)
             }
 
             return SignalMessage(
@@ -94,7 +133,9 @@ data class SignalMessage (
                 quoteText,
                 reactionEmoji,
                 reactionTarget,
-                isReactionRemove
+                attachmentName,
+                isReactionRemove,
+                remoteDelete,
             )
         }
     }
@@ -102,6 +143,12 @@ data class SignalMessage (
     fun toChatMessage(contacts: List<SignalContact>): ChatMessage {
         val name = contacts.find { it.number == sourceNumber }?.displayName
             ?: sourceName.split(" ").first()
+
+        var reactionText: String? = null
+        if (reactionTarget != null) {
+            val reactionMessage = SignalDatabase.getMessage(reactionTarget)
+            reactionText = reactionMessage?.message
+        }
 
         return ChatMessage(
             timestamp,
@@ -112,7 +159,8 @@ data class SignalMessage (
             fromBot,
             quoteText,
             reactionEmoji,
-            "MESSAGE NOT LOOKED UP"
+            reactionText,
+            attachmentsInfo,
         )
     }
 }

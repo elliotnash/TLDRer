@@ -2,10 +2,9 @@ package services.signal
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.transactions.transaction
-import services.signal.SignalMessages.reactionEmoji
-import services.signal.SignalMessages.reactionTarget
-import services.signal.SignalMessages.sourceNumber
 
 object SignalDatabase {
     init {
@@ -19,7 +18,7 @@ object SignalDatabase {
 
     fun addMessage(message: SignalMessage) {
         try {
-            if (message.isReactionRemove == true) {
+            if (message.isReactionRemove) {
                 // If it's a reaction remove we should remove the entry
                 // from the database instead of adding it
                 transaction {
@@ -27,6 +26,14 @@ object SignalDatabase {
                         (reactionTarget eq message.reactionTarget) and
                         (reactionEmoji eq message.reactionEmoji) and
                         (sourceNumber eq message.sourceNumber)
+                    }
+                }
+            } else if (message.remoteDelete != null) {
+                // If it has a remoteDelete key, we should remove the message
+                // from the database instead of adding it
+                transaction {
+                    SignalMessages.deleteWhere {
+                        timestamp eq message.remoteDelete
                     }
                 }
             } else {
@@ -54,6 +61,7 @@ object SignalDatabase {
                         it[quoteText] = message.quoteText
                         it[reactionEmoji] = message.reactionEmoji
                         it[reactionTarget] = message.reactionTarget
+                        it[attachmentsInfo] = message.attachmentsInfo
                     }
                 }
             }
@@ -61,6 +69,50 @@ object SignalDatabase {
             e.printStackTrace()
         }
 
+    }
+
+    fun getMessage(timestamp: Long): SignalMessage? {
+        return transaction {
+            SignalMessages.select {
+                SignalMessages.timestamp eq timestamp
+            }.map {
+                SignalMessage.fromResultRow(it)
+            }.firstOrNull()
+        }
+    }
+
+    fun getMessages(conversationNumber: String, since: Long? = null, before: Long? = null, limit: Int? = null): List<SignalMessage> {
+        return transaction {
+            var selection = (SignalMessages.conversationNumber eq conversationNumber)
+            if (before != null) {
+                selection = selection and (SignalMessages.timestamp less before)
+            }
+            if (since != null) {
+                selection = selection and (SignalMessages.timestamp greater since)
+            }
+
+            return@transaction SignalMessages.select { selection }
+                .orderBy(SignalMessages.timestamp to SortOrder.DESC)
+                .limit(limit ?: 500).map {
+                    SignalMessage.fromResultRow(it)
+                }.sortedBy { it.timestamp }
+        }
+    }
+
+    fun getPreviousMessage(timestamp: Long): SignalMessage? {
+        val message = getMessage(timestamp) ?: return null
+        return transaction {
+            SignalMessages.select {
+                (SignalMessages.conversationNumber eq message.conversationNumber) and
+                (SignalMessages.sourceNumber eq message.sourceNumber) and
+                (SignalMessages.timestamp less timestamp) and
+                (SignalMessages.reactionTarget.isNull())
+            }.orderBy(SignalMessages.timestamp to SortOrder.DESC)
+                .limit(1)
+                .map {
+                   SignalMessage.fromResultRow(it)
+                }
+        }.firstOrNull()
     }
 }
 
@@ -76,4 +128,5 @@ object SignalMessages : Table("messages") {
     val quoteText: Column<String?> = text("quote_text").nullable()
     val reactionEmoji: Column<String?> = text("reaction_emoji").nullable()
     val reactionTarget: Column<Long?> = long("reaction_target").nullable()
+    val attachmentsInfo: Column<String?> = text("attachments_info").nullable()
 }

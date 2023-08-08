@@ -71,16 +71,19 @@ class SignalService(
                 val envelope = message.params!!.jsonObject["envelope"]!!.jsonObject
                 // We don't care about read/delivered receipts
                 if (envelope.containsKey("dataMessage") || (envelope.containsKey("syncMessage") && envelope["syncMessage"]!!.jsonObject.containsKey("sentMessage"))) {
-                    val signalMessage = SignalMessage.fromEnvelope(envelope)
+                    val signalMessage = SignalMessage.fromJsonObject(envelope)
                     logger.trace { "Decoded update: $signalMessage from ${json.encodeToString(message)}" }
                     // Add decoded message to database
                     SignalDatabase.addMessage(signalMessage)
                     // Notifier listeners
-                    notifyMessageListeners(signalMessage.toChatMessage(contacts))
+                    if (!signalMessage.isReactionRemove && signalMessage.remoteDelete == null) {
+                        notifyMessageListeners(signalMessage.toChatMessage(contacts))
+                    }
                 } else {
                     logger.debug { "Received non-decodable update: $message" }
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
                 logger.warn { "Failed to decode decodable message:" }
                 logger.warn { message }
                 logger.warn { json.encodeToString(message) }
@@ -167,9 +170,22 @@ class SignalService(
             quoteText = null,
             reactionEmoji = null,
             reactionTarget = null,
-            isReactionRemove = null,
+            attachmentsInfo = null,
+            isReactionRemove = false,
+            remoteDelete = null,
         )
         SignalDatabase.addMessage(signalMessage)
         notifyMessageListeners(signalMessage.toChatMessage(contacts))
     }
+
+    fun getMessage(timestamp: Long): ChatMessage? =
+        SignalDatabase.getMessage(timestamp)?.toChatMessage(contacts)
+
+    fun getPreviousMessage(timestamp: Long) =
+        SignalDatabase.getPreviousMessage(timestamp)?.toChatMessage(contacts)
+
+    fun getMessages(conversationId: String, since: Long? = null, before: Long? = null, limit: Int? = null) =
+        SignalDatabase.getMessages(conversationId, since, before, limit).map {
+            it.toChatMessage(contacts)
+        }
 }

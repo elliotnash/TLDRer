@@ -11,8 +11,9 @@ import java.lang.Exception
 import java.util.UUID
 
 class SignalService(
-    val accountNumber: String
+    private val accountNumber: String
 ) : ChatService {
+    override val name = "Signal"
     private val logger = KotlinLogging.logger {}
 
     private val json = Json {
@@ -127,6 +128,10 @@ class SignalService(
         }.filterNotNull()
     }
 
+    suspend fun lookupConversationId(conversationName: String) {
+
+    }
+
     override suspend fun sendMessage(conversationId: String, message: String) {
         val messageMap = mutableMapOf<String, JsonElement>(
             "message" to JsonPrimitive(message)
@@ -178,13 +183,13 @@ class SignalService(
         notifyMessageListeners(signalMessage.toChatMessage(contacts))
     }
 
-    fun getMessage(timestamp: Long): ChatMessage? =
+    override fun getMessage(timestamp: Long) =
         SignalDatabase.getMessage(timestamp)?.toChatMessage(contacts)
 
-    fun getPreviousMessage(timestamp: Long) =
+    override fun getPreviousMessage(timestamp: Long) =
         SignalDatabase.getPreviousMessage(timestamp)?.toChatMessage(contacts)
 
-    fun getMessages(conversationId: String, since: Long? = null, before: Long? = null, limit: Int? = null) =
+    override fun getMessages(conversationId: String, since: Long?, before: Long?, limit: Int?) =
         SignalDatabase.getMessages(conversationId, since, before, limit).map {
             it.toChatMessage(contacts)
         }

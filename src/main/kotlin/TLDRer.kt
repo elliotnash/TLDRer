@@ -25,6 +25,16 @@ class TLDRer {
     )
 
     private val commands = listOf(
+        Command("!search") { service, message, content ->
+            if (content != null) {
+                // Looking up conversations is service dependant currently.
+                // Currently only implemented for Signal
+                if (service is SignalService) {
+                    val cid = service.lookupConversationId(content)
+                    service.sendMessage(message.conversationId, "Found conversation ID: $cid")
+                }
+            }
+        },
         Command("!tldr") { service, message, content ->
             // Process the command arguments to fetch the limit and conversation name
             var conversationName: String? = null

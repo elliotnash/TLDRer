@@ -30,6 +30,8 @@ dependencies {
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 
+    implementation("me.xdrop:fuzzywuzzy:1.4.0")
+
     testImplementation(kotlin("test"))
 }
 

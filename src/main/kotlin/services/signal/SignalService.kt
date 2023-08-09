@@ -5,6 +5,7 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
+import me.xdrop.fuzzywuzzy.FuzzySearch
 import services.ChatMessage
 import services.ChatService
 import java.lang.Exception
@@ -32,6 +33,7 @@ class SignalService(
     private val rpcQueue = mutableMapOf<String, CompletableDeferred<RpcResponse>>()
 
     private var contacts = listOf<SignalContact>()
+    private var groups = listOf<SignalGroup>()
 
     private suspend fun sendRpcMessage(message: RpcCall): RpcResponse {
         // get request ID
@@ -59,6 +61,7 @@ class SignalService(
         }
         scope.launch {
             fetchContactList()
+            fetchGroups()
         }
     }
 
@@ -128,8 +131,40 @@ class SignalService(
         }.filterNotNull()
     }
 
-    suspend fun lookupConversationId(conversationName: String) {
+    suspend fun fetchGroups() {
+        val call = RpcCall("listGroups")
+        val response = sendRpcMessage(call)
+        if (response !is RpcResult) {
+            logger.warn { "Error fetching groups: $response" }
+            return
+        }
 
+        groups = response.result.jsonArray.toList().map {
+            SignalGroup.fromJsonObject(it.jsonObject)
+        }
+    }
+
+    fun lookupConversationId(conversationName: String): String? {
+        val conversationMap = mutableMapOf<String, String>()
+        for (contact in contacts) {
+            if (contact.contactName != null) {
+                conversationMap[contact.contactName] = contact.number
+            }
+            if (contact.profileName != null) {
+                conversationMap[contact.profileName] = contact.number
+            }
+        }
+        for (group in groups) {
+            conversationMap[group.name] = group.id
+        }
+
+        val result = FuzzySearch.extractOne(conversationName, conversationMap.keys)
+        // Only allow results that are close enough
+        println(result)
+        if (result.score < 70) {
+            return null
+        }
+        return conversationMap[result.string]!!
     }
 
     override suspend fun sendMessage(conversationId: String, message: String) {

@@ -2,6 +2,7 @@ package services
 
 data class ChatMessage (
     val timestamp: Long,
+    val senderId: String,
     val senderName: String,
     val conversationId: String,
     val text: String?,

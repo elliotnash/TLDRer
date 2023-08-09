@@ -221,8 +221,8 @@ class SignalService(
     override fun getMessage(timestamp: Long) =
         SignalDatabase.getMessage(timestamp)?.toChatMessage(contacts)
 
-    override fun getPreviousMessage(timestamp: Long) =
-        SignalDatabase.getPreviousMessage(timestamp)?.toChatMessage(contacts)
+    override fun getLastMessage(conversationId: String, senderId: String, before: Long?) =
+        SignalDatabase.getLastMessage(conversationId, senderId, before)?.toChatMessage(contacts)
 
     override fun getMessages(conversationId: String, since: Long?, before: Long?, limit: Int?) =
         SignalDatabase.getMessages(conversationId, since, before, limit).map {

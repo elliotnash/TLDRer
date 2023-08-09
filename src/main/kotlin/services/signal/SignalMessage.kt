@@ -152,6 +152,7 @@ data class SignalMessage (
 
         return ChatMessage(
             timestamp,
+            sourceNumber,
             name,
             conversationNumber,
             message,

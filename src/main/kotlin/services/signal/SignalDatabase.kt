@@ -3,6 +3,7 @@ package services.signal
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -99,15 +100,16 @@ object SignalDatabase {
         }
     }
 
-    fun getPreviousMessage(timestamp: Long): SignalMessage? {
-        val message = getMessage(timestamp) ?: return null
-        return transaction {
-            SignalMessages.select {
-                (SignalMessages.conversationNumber eq message.conversationNumber) and
-                (SignalMessages.sourceNumber eq message.sourceNumber) and
-                (SignalMessages.timestamp less timestamp) and
+    fun getLastMessage(conversationId: String, senderId: String, before: Long?): SignalMessage? {
+        var selection = (SignalMessages.conversationNumber eq conversationId) and
+                (SignalMessages.sourceNumber eq senderId) and
                 (SignalMessages.reactionTarget.isNull())
-            }.orderBy(SignalMessages.timestamp to SortOrder.DESC)
+        if (before != null) {
+            selection = selection and (SignalMessages.timestamp less before)
+        }
+        return transaction {
+            SignalMessages.select { selection }
+                .orderBy(SignalMessages.timestamp to SortOrder.DESC)
                 .limit(1)
                 .map {
                    SignalMessage.fromResultRow(it)

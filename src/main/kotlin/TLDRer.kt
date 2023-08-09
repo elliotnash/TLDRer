@@ -59,23 +59,27 @@ class TLDRer {
                 limit = min(max(limit, 1), 500)
             }
 
-//            // We'll use the current chat as the conversationId unless specified with conversationName
-//            var conversationId = message.conversationId
-//            if (conversationName != null) {
-//                // Looking up conversations is service dependant currently.
-//                // Currently only implemented for Signal
-//                if (service is SignalService) {
-//                    service.
-//                }
-//            }
+            // We'll use the current chat as the conversationId unless specified with conversationName
+            var conversationId = message.conversationId
+            if (conversationName != null) {
+                // Looking up conversations is service dependant currently.
+                // Currently only implemented for Signal
+                if (service is SignalService) {
+                    val id = service.lookupConversationId(conversationName)
+                    if (id == null) {
+                        service.sendMessage(message.conversationId, "Sorry, that user could not be found!")
+                    }
+                    conversationId = id!!
+                }
+            }
 
-            val lastMessage = service.getPreviousMessage(message.timestamp)
+            val lastMessage = service.getLastMessage(conversationId, message.senderId, message.timestamp)
             val since = if (limit != null) {
                 null
             } else {
                 lastMessage?.timestamp
             }
-            val msgHistory = service.getMessages(message.conversationId, since=since, before=message.timestamp, limit=limit)
+            val msgHistory = service.getMessages(conversationId, since=since, before=message.timestamp, limit=limit)
 
             var transcript = ""
             for (msg in msgHistory) {

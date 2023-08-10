@@ -54,22 +54,23 @@ class TLDRer {
                     conversationName = content
                 }
             }
-            // Clamp limit between 1 and 500
+            // Clamp limit between 1 and 250
             if (limit != null) {
-                limit = min(max(limit, 1), 500)
+                limit = min(max(limit, 1), 250)
             }
 
             // We'll use the current chat as the conversationId unless specified with conversationName
             var conversationId = message.conversationId
-            if (conversationName != null) {
+            if (!conversationName.isNullOrBlank()) {
                 // Looking up conversations is service dependant currently.
                 // Currently only implemented for Signal
                 if (service is SignalService) {
                     val id = service.lookupConversationId(conversationName)
                     if (id == null) {
                         service.sendMessage(message.conversationId, "Sorry, that user/group could not be found!")
+                        return@Command
                     }
-                    conversationId = id!!
+                    conversationId = id
                 }
             }
 

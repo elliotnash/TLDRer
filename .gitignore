@@ -15,6 +15,9 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### Fleet ###
+.fleet
+
 ### Eclipse ###
 .apt_generated
 .classpath

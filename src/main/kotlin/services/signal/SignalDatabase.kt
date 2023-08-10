@@ -94,7 +94,7 @@ object SignalDatabase {
 
             return@transaction SignalMessages.select { selection }
                 .orderBy(SignalMessages.timestamp to SortOrder.DESC)
-                .limit(limit ?: 500).map {
+                .limit(limit ?: 250).map {
                     SignalMessage.fromResultRow(it)
                 }.sortedBy { it.timestamp }
         }

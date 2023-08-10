@@ -67,7 +67,7 @@ class TLDRer {
                 if (service is SignalService) {
                     val id = service.lookupConversationId(conversationName)
                     if (id == null) {
-                        service.sendMessage(message.conversationId, "Sorry, that user could not be found!")
+                        service.sendMessage(message.conversationId, "Sorry, that user/group could not be found!")
                     }
                     conversationId = id!!
                 }

@@ -159,8 +159,7 @@ class SignalService(
         }
 
         val result = FuzzySearch.extractOne(conversationName, conversationMap.keys)
-        // Only allow results that are close enough
-        println(result)
+        // Only allow results that are within threshold.
         if (result.score < 70) {
             return null
         }

@@ -1,3 +1,5 @@
+import org.gradle.jvm.tasks.Jar
+
 plugins {
     kotlin("jvm") version "1.9.0"
     kotlin("plugin.serialization") version "1.9.0"
@@ -6,6 +8,10 @@ plugins {
 
 group = "org.elliotnash"
 version = "1.0-SNAPSHOT"
+
+application {
+    mainClass.set("org.elliotnash.TLDRerKt")
+}
 
 repositories {
     mavenCentral()
@@ -35,14 +41,28 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+tasks {
+    val fatJar = register<Jar>("fatJar") {
+        dependsOn.addAll(listOf("compileJava", "compileKotlin", "processResources")) // We need this for Gradle optimization to work
+        archiveClassifier.set("standalone") // Naming the jar
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        manifest { attributes(mapOf("Main-Class" to application.mainClass)) }
+        val sourcesMain = sourceSets.main.get()
+        val contents = configurations.runtimeClasspath.get()
+            .map { if (it.isDirectory) it else zipTree(it) } +
+                sourcesMain.output
+        from(contents)
+    }
+
+    build {
+        dependsOn(fatJar)
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
 
 kotlin {
     jvmToolchain(17)
-}
-
-application {
-    mainClass.set("TLDRerKt")
 }

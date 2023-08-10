@@ -1,8 +1,8 @@
-package services.signal
+package org.elliotnash.services.signal
 
 import kotlinx.serialization.json.*
 import org.jetbrains.exposed.sql.ResultRow
-import services.ChatMessage
+import org.elliotnash.services.ChatMessage
 
 data class SignalMessage (
     val timestamp: Long,

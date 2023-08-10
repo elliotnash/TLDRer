@@ -1,4 +1,4 @@
-package services
+package org.elliotnash.services
 
 data class ChatMessage (
     val timestamp: Long,

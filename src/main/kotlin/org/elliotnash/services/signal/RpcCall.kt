@@ -1,9 +1,8 @@
-package services.signal
+package org.elliotnash.services.signal
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import java.util.UUID
 

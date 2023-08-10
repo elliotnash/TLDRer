@@ -1,11 +1,13 @@
+package org.elliotnash
+
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import services.ChatMessage
-import services.ChatService
-import services.signal.SignalService
+import org.elliotnash.services.ChatMessage
+import org.elliotnash.services.ChatService
+import org.elliotnash.services.signal.SignalService
 import kotlin.math.max
 import kotlin.math.min
 

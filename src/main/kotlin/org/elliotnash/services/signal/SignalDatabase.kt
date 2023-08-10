@@ -1,4 +1,4 @@
-package services.signal
+package org.elliotnash.services.signal
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -112,7 +112,7 @@ object SignalDatabase {
                 .orderBy(SignalMessages.timestamp to SortOrder.DESC)
                 .limit(1)
                 .map {
-                   SignalMessage.fromResultRow(it)
+                    SignalMessage.fromResultRow(it)
                 }
         }.firstOrNull()
     }

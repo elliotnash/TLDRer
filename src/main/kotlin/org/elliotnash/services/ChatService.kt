@@ -1,4 +1,4 @@
-package services
+package org.elliotnash.services
 
 import kotlinx.coroutines.CoroutineScope
 

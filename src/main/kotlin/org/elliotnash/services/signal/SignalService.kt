@@ -1,4 +1,4 @@
-package services.signal
+package org.elliotnash.services.signal
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.*
@@ -6,8 +6,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import me.xdrop.fuzzywuzzy.FuzzySearch
-import services.ChatMessage
-import services.ChatService
+import org.elliotnash.services.ChatMessage
+import org.elliotnash.services.ChatService
 import java.lang.Exception
 import java.util.UUID
 

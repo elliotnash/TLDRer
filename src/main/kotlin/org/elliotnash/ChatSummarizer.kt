@@ -1,3 +1,5 @@
+package org.elliotnash
+
 import com.cjcrafter.openai.OpenAI
 import com.cjcrafter.openai.chat.ChatMessage
 import com.cjcrafter.openai.chat.ChatMessage.Companion.toSystemMessage
